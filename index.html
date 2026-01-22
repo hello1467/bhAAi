@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fox Runner (Easy Mode)</title>
+
+<style>
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #2e7d32;
+}
+canvas {
+    display: block;
+}
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<script>
+// ================= CANVAS =================
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+// ================= LOAD IMAGE =================
+const foxImg = new Image();
+foxImg.src = "fox.jpg";
+
+// ================= LOAD MPEG AUDIO =================
+const jumpSound = new Audio();
+jumpSound.src = "jump.mpeg";
+jumpSound.type = "audio/mpeg";
+jumpSound.volume = 0.6;
+
+// Audio unlock
+document.addEventListener("click", () => {
+    jumpSound.play().then(() => jumpSound.pause());
+}, { once: true });
+
+// ================= GAME STATE =================
+let gravity = 0.8;   // lighter gravity
+let speed = 5.5;     // slower start
+let score = 0;
+let gameOver = false;
+
+// ================= GROUND =================
+function groundY() {
+    return canvas.height * 0.75;
+}
+
+// ================= FOX (SMALLER) =================
+const fox = {
+    x: canvas.width * 0.15,
+    y: 0,
+    w: 90,    // ✅ smaller
+    h: 95,    // ✅ smaller
+    vy: 0,
+    jumping: false
+};
+
+// ================= OBSTACLE (SMALLER) =================
+const obstacle = {
+    x: canvas.width,
+    w: 30,    // ✅ smaller
+    h: 45     // ✅ smaller
+};
+
+// ================= INPUT =================
+window.addEventListener("keydown", e => {
+    if ((e.code === "Space" || e.code === "ArrowUp") && !fox.jumping) {
+        fox.vy = -17;   // stronger jump
+        fox.jumping = true;
+
+        jumpSound.currentTime = 0;
+        jumpSound.play();
+    }
+
+    if (gameOver && e.code === "Space") {
+        location.reload();
+    }
+});
+
+// ================= UPDATE =================
+function update() {
+    if (gameOver) return;
+
+    fox.vy += gravity;
+    fox.y += fox.vy;
+
+    if (fox.y >= groundY() - fox.h) {
+        fox.y = groundY() - fox.h;
+        fox.vy = 0;
+        fox.jumping = false;
+    }
+
+    obstacle.x -= speed;
+    if (obstacle.x < -obstacle.w) {
+        obstacle.x = canvas.width + Math.random() * 350;
+        score++;
+        speed += 0.1;  // slow difficulty increase
+    }
+
+    const oy = groundY() - obstacle.h;
+    if (
+        fox.x + 10 < obstacle.x + obstacle.w &&
+        fox.x + fox.w - 10 > obstacle.x &&
+        fox.y + 5 < oy + obstacle.h &&
+        fox.y + fox.h > oy
+    ) {
+        gameOver = true;
+    }
+}
+
+// ================= DRAW =================
+function draw() {
+    // background
+    ctx.fillStyle = "#66bb6a";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // trees
+    for (let i = 0; i < canvas.width; i += 220) {
+        ctx.fillStyle = "#1b5e20";
+        ctx.beginPath();
+        ctx.moveTo(i, groundY());
+        ctx.lineTo(i + 110, groundY() - 190);
+        ctx.lineTo(i + 220, groundY());
+        ctx.fill();
+    }
+
+    // ground
+    ctx.fillStyle = "#2e7d32";
+    ctx.fillRect(0, groundY(), canvas.width, canvas.height);
+
+    // obstacle
+    const oy = groundY() - obstacle.h;
+    ctx.fillStyle = "#5d4037";
+    ctx.fillRect(obstacle.x, oy, obstacle.w, obstacle.h);
+
+    // fox
+    ctx.drawImage(foxImg, fox.x, fox.y, fox.w, fox.h);
+
+    // score
+    ctx.fillStyle = "#fff";
+    ctx.font = "22px Arial";
+    ctx.fillText("Score: " + score, 20, 40);
+
+    // game over
+    if (gameOver) {
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#ff5252";
+        ctx.font = "48px Arial";
+        ctx.fillText("GAME OVER", canvas.width / 2 - 160, canvas.height / 2);
+
+        ctx.font = "22px Arial";
+        ctx.fillStyle = "#fff";
+        ctx.fillText(
+            "Press SPACE to Restart",
+            canvas.width / 2 - 140,
+            canvas.height / 2 + 40
+        );
+    }
+}
+
+// ================= GAME LOOP =================
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+// start after image loads
+foxImg.onload = () => {
+    fox.y = groundY() - fox.h;
+    obstacle.x = canvas.width;
+    loop();
+};
+</script>
+
+</body>
+</html>
