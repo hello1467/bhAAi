@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Fox Runner (Easy Mode)</title>
+<title>Fox Runner (Mobile + Desktop)</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
 <style>
 html, body {
@@ -10,6 +12,7 @@ html, body {
     padding: 0;
     overflow: hidden;
     background: #2e7d32;
+    touch-action: manipulation; /* important for mobile */
 }
 canvas {
     display: block;
@@ -42,14 +45,17 @@ jumpSound.src = "jump.mpeg";
 jumpSound.type = "audio/mpeg";
 jumpSound.volume = 0.6;
 
-// Audio unlock
-document.addEventListener("click", () => {
+// ================= AUDIO UNLOCK =================
+let audioUnlocked = false;
+function unlockAudio() {
+    if (audioUnlocked) return;
     jumpSound.play().then(() => jumpSound.pause());
-}, { once: true });
+    audioUnlocked = true;
+}
 
 // ================= GAME STATE =================
-let gravity = 0.8;   // lighter gravity
-let speed = 5.5;     // slower start
+let gravity = 0.8;
+let speed = 5.5;
 let score = 0;
 let gameOver = false;
 
@@ -58,37 +64,46 @@ function groundY() {
     return canvas.height * 0.75;
 }
 
-// ================= FOX (SMALLER) =================
+// ================= FOX =================
 const fox = {
     x: canvas.width * 0.15,
     y: 0,
-    w: 90,    // ✅ smaller
-    h: 95,    // ✅ smaller
+    w: 90,
+    h: 95,
     vy: 0,
     jumping: false
 };
 
-// ================= OBSTACLE (SMALLER) =================
+// ================= OBSTACLE =================
 const obstacle = {
     x: canvas.width,
-    w: 30,    // ✅ smaller
-    h: 45     // ✅ smaller
+    w: 30,
+    h: 45
 };
 
-// ================= INPUT =================
-window.addEventListener("keydown", e => {
-    if ((e.code === "Space" || e.code === "ArrowUp") && !fox.jumping) {
-        fox.vy = -17;   // stronger jump
+// ================= JUMP FUNCTION =================
+function jump() {
+    if (!fox.jumping && !gameOver) {
+        fox.vy = -17;
         fox.jumping = true;
 
+        unlockAudio();
         jumpSound.currentTime = 0;
         jumpSound.play();
     }
+    if (gameOver) location.reload();
+}
 
-    if (gameOver && e.code === "Space") {
-        location.reload();
-    }
+// ================= INPUT =================
+window.addEventListener("keydown", e => {
+    if (e.code === "Space" || e.code === "ArrowUp") jump();
 });
+
+window.addEventListener("mousedown", jump);
+window.addEventListener("touchstart", e => {
+    e.preventDefault();
+    jump();
+}, { passive: false });
 
 // ================= UPDATE =================
 function update() {
@@ -107,7 +122,7 @@ function update() {
     if (obstacle.x < -obstacle.w) {
         obstacle.x = canvas.width + Math.random() * 350;
         score++;
-        speed += 0.1;  // slow difficulty increase
+        speed += 0.1;
     }
 
     const oy = groundY() - obstacle.h;
@@ -160,15 +175,15 @@ function draw() {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.fillStyle = "#ff5252";
-        ctx.font = "48px Arial";
-        ctx.fillText("GAME OVER", canvas.width / 2 - 160, canvas.height / 2);
+        ctx.font = "42px Arial";
+        ctx.fillText("GAME OVER", canvas.width / 2 - 140, canvas.height / 2);
 
-        ctx.font = "22px Arial";
+        ctx.font = "20px Arial";
         ctx.fillStyle = "#fff";
         ctx.fillText(
-            "Press SPACE to Restart",
-            canvas.width / 2 - 140,
-            canvas.height / 2 + 40
+            "Tap or Press SPACE to Restart",
+            canvas.width / 2 - 150,
+            canvas.height / 2 + 35
         );
     }
 }
@@ -180,7 +195,7 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
-// start after image loads
+// ================= START =================
 foxImg.onload = () => {
     fox.y = groundY() - fox.h;
     obstacle.x = canvas.width;
